@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
+## [1.0.1]
+
 ## [1.0.0] — 2026-05-07
 ### Added
 
