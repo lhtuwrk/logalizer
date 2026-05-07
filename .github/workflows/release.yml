@@ -32,17 +32,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
-            client/package-lock.json
-
-      # Pin npm to 10.x — newer npm shipped on the runner has crashed with
-      # "Exit handler never called!" mid-install, leaving node_modules empty.
-      - name: Pin npm version
-        shell: bash
-        run: npm install -g npm@10
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -69,24 +58,13 @@ jobs:
       - name: Install server dependencies
         shell: bash
         working-directory: server
-        run: |
-          echo "=== node: $(node -v) | npm: $(npm -v) ==="
-          echo "=== package.json version: $(node -p "require('./package.json').version") ==="
-          echo "=== lockfile version: $(node -p "require('./package-lock.json').version") ==="
-          npm ci --no-fund --no-audit --loglevel=verbose || {
-            echo "=== npm ci failed — dumping debug log ==="
-            for log in "$(npm config get cache)"/_logs/*-debug-0.log; do
-              echo "--- $log ---"
-              cat "$log" || true
-            done
-            exit 1
-          }
+        run: npm install --no-fund --no-audit
 
       - name: Install and build client
         shell: bash
         working-directory: client
         run: |
-          npm ci --no-fund --no-audit
+          npm install --no-fund --no-audit
           npm run build
 
       - name: Package Electron app
