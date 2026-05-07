@@ -38,6 +38,12 @@ jobs:
             server/package-lock.json
             client/package-lock.json
 
+      # Pin npm to 10.x — newer npm shipped on the runner has crashed with
+      # "Exit handler never called!" mid-install, leaving node_modules empty.
+      - name: Pin npm version
+        shell: bash
+        run: npm install -g npm@10
+
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install -y libarchive-tools rpm
@@ -48,9 +54,11 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          npm pkg set version="$VERSION"
-          npm pkg set version="$VERSION" --prefix server
-          npm pkg set version="$VERSION" --prefix client
+          # Use `npm version` (not `npm pkg set`) so package-lock.json
+          # stays in sync — `npm ci` later will reject any mismatch.
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          npm version "$VERSION" --no-git-tag-version --allow-same-version --prefix server
+          npm version "$VERSION" --no-git-tag-version --allow-same-version --prefix client
 
       - name: Install root dependencies
         shell: bash
