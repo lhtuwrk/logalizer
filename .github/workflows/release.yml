@@ -33,6 +33,14 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Pin npm to v10
+        shell: bash
+        run: npm install -g npm@10
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -49,19 +57,23 @@ jobs:
           npm pkg set version="$VERSION" --prefix client
 
       - name: Install root dependencies
-        run: npm install
+        shell: bash
+        run: npm install --no-fund --no-audit
 
       - name: Install server dependencies
+        shell: bash
         working-directory: server
-        run: npm install
+        run: npm install --no-fund --no-audit
 
       - name: Install and build client
+        shell: bash
         working-directory: client
         run: |
-          npm install
+          npm install --no-fund --no-audit
           npm run build
 
       - name: Package Electron app
+        shell: bash
         run: npx electron-builder
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -96,15 +108,17 @@ jobs:
 
       - name: Extract version from tag
         id: version
+        shell: bash
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       # Read the changelog section that matches this version.
       # Handles both "## [1.0.0]" (undated) and "## [1.0.0] — 2026-05-07".
       - name: Read changelog entry
         id: changelog
+        shell: bash
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
-          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          NOTES=$(awk "/^## \[${VERSION//./\\.}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
           if [ -z "$NOTES" ]; then
             NOTES="See [CHANGELOG.md](CHANGELOG.md) for details."
           fi
@@ -117,9 +131,9 @@ jobs:
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          name: Logalizer v${{ steps.version.outputs.VERSION }}
+          name: "Logalizer v${{ steps.version.outputs.VERSION }}"
           tag_name: ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.NOTES }}
+          body: "${{ steps.changelog.outputs.NOTES }}"
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: artifacts/**/*
@@ -136,6 +150,8 @@ jobs:
   sync-version:
     name: Bump to next version
     needs: release
+    # Skip for pre-release tags (e.g. v1.0.1-beta.1) — patch math would break on the suffix
+    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -164,13 +180,13 @@ jobs:
           DATE="${{ steps.next.outputs.DATE }}"
 
           # 1. Stamp the released version with today's date (if not already dated)
-          sed -i "s/^## \[$VERSION\]$/## [$VERSION] — $DATE/" CHANGELOG.md
+          sed -i "s/^## \[${VERSION//./\\.}\]$/## [${VERSION}] — ${DATE}/" CHANGELOG.md
 
           # 2. Prepend a new section for the next version right above the released one
-          sed -i "s/^## \[$VERSION\] — $DATE/## [$NEXT]\n\n## [$VERSION] — $DATE/" CHANGELOG.md
+          sed -i "s/^## \[${VERSION//./\\.}\] — ${DATE}/## [${NEXT}]\n\n## [${VERSION}] — ${DATE}/" CHANGELOG.md
 
           # 3. Append a reference link at the bottom for the released version
-          if ! grep -q "^\[$VERSION\]:" CHANGELOG.md; then
+          if ! grep -q "^\[${VERSION}\]:" CHANGELOG.md; then
             printf "\n[%s]: https://github.com/%s/releases/tag/v%s\n" \
               "$VERSION" "${{ github.repository }}" "$VERSION" >> CHANGELOG.md
           fi
