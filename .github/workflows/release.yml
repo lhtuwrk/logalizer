@@ -32,6 +32,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Clear npm cache
+        if: runner.os == 'Windows'
+        run: npm cache clean --force
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -53,11 +61,18 @@ jobs:
         run: npm install --no-fund --no-audit
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          npm_config_fetch_timeout: 120000
+          npm_config_fetch_retry_mintimeout: 20000
+          npm_config_fetch_retry_maxtimeout: 120000
 
       - name: Install server dependencies
         shell: bash
         working-directory: server
         run: npm install --no-fund --no-audit
+        env:
+          npm_config_fetch_timeout: 120000
+          npm_config_fetch_retry_mintimeout: 20000
+          npm_config_fetch_retry_maxtimeout: 120000
 
       - name: Install and build client
         shell: bash
@@ -65,6 +80,10 @@ jobs:
         run: |
           npm install --no-fund --no-audit
           npm run build
+        env:
+          npm_config_fetch_timeout: 120000
+          npm_config_fetch_retry_mintimeout: 20000
+          npm_config_fetch_retry_maxtimeout: 120000
 
       - name: Package Electron app
         shell: bash
