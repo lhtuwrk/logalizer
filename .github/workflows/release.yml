@@ -61,7 +61,19 @@ jobs:
         shell: bash
         # ELECTRON_SKIP_BINARY_DOWNLOAD: electron-builder fetches its own copy at package time.
         timeout-minutes: 15
-        run: npm install --no-fund --no-audit
+        run: |
+          for attempt in {1..3}; do
+            echo "Attempt $attempt of 3..."
+            npm install --no-fund --no-audit --verbose && break || {
+              if [ $attempt -lt 3 ]; then
+                echo "Installation failed, clearing cache and retrying..."
+                npm cache clean --force
+                sleep 10
+              else
+                exit 1
+              fi
+            }
+          done
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
           npm_config_fetch_timeout: 120000
@@ -74,7 +86,19 @@ jobs:
         shell: bash
         working-directory: server
         timeout-minutes: 15
-        run: npm install --no-fund --no-audit
+        run: |
+          for attempt in {1..3}; do
+            echo "Attempt $attempt of 3..."
+            npm install --no-fund --no-audit --verbose && break || {
+              if [ $attempt -lt 3 ]; then
+                echo "Installation failed, clearing cache and retrying..."
+                npm cache clean --force
+                sleep 10
+              else
+                exit 1
+              fi
+            }
+          done
         env:
           npm_config_fetch_timeout: 120000
           npm_config_fetch_retry_mintimeout: 20000
@@ -87,7 +111,18 @@ jobs:
         working-directory: client
         timeout-minutes: 15
         run: |
-          npm install --no-fund --no-audit
+          for attempt in {1..3}; do
+            echo "Attempt $attempt of 3..."
+            npm install --no-fund --no-audit --verbose && break || {
+              if [ $attempt -lt 3 ]; then
+                echo "Installation failed, clearing cache and retrying..."
+                npm cache clean --force
+                sleep 10
+              else
+                exit 1
+              fi
+            }
+          done
           npm run build
         env:
           npm_config_fetch_timeout: 120000
