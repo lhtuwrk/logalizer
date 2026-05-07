@@ -33,15 +33,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
-      - name: Update npm
-        run: npm install -g npm@latest
-
-      - name: Clear npm cache
-        if: runner.os == 'Windows'
-        run: |
-          npm cache clean --force
-          npm cache verify
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -59,77 +51,21 @@ jobs:
 
       - name: Install root dependencies
         shell: bash
-        # ELECTRON_SKIP_BINARY_DOWNLOAD: electron-builder fetches its own copy at package time.
-        timeout-minutes: 15
-        run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt of 3..."
-            npm install --no-fund --no-audit --verbose && break || {
-              if [ $attempt -lt 3 ]; then
-                echo "Installation failed, clearing cache and retrying..."
-                npm cache clean --force
-                sleep 10
-              else
-                exit 1
-              fi
-            }
-          done
+        run: npm install --no-fund --no-audit
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
-          npm_config_fetch_timeout: 120000
-          npm_config_fetch_retry_mintimeout: 20000
-          npm_config_fetch_retry_maxtimeout: 120000
-          npm_config_fetch_retries: 5
-          npm_config_max_sockets: 1
 
       - name: Install server dependencies
         shell: bash
         working-directory: server
-        timeout-minutes: 15
-        run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt of 3..."
-            npm install --no-fund --no-audit --verbose && break || {
-              if [ $attempt -lt 3 ]; then
-                echo "Installation failed, clearing cache and retrying..."
-                npm cache clean --force
-                sleep 10
-              else
-                exit 1
-              fi
-            }
-          done
-        env:
-          npm_config_fetch_timeout: 120000
-          npm_config_fetch_retry_mintimeout: 20000
-          npm_config_fetch_retry_maxtimeout: 120000
-          npm_config_fetch_retries: 5
-          npm_config_max_sockets: 1
+        run: npm install --no-fund --no-audit
 
       - name: Install and build client
         shell: bash
         working-directory: client
-        timeout-minutes: 15
         run: |
-          for attempt in {1..3}; do
-            echo "Attempt $attempt of 3..."
-            npm install --no-fund --no-audit --verbose && break || {
-              if [ $attempt -lt 3 ]; then
-                echo "Installation failed, clearing cache and retrying..."
-                npm cache clean --force
-                sleep 10
-              else
-                exit 1
-              fi
-            }
-          done
+          npm install --no-fund --no-audit
           npm run build
-        env:
-          npm_config_fetch_timeout: 120000
-          npm_config_fetch_retry_mintimeout: 20000
-          npm_config_fetch_retry_maxtimeout: 120000
-          npm_config_fetch_retries: 5
-          npm_config_max_sockets: 1
 
       - name: Package Electron app
         shell: bash
