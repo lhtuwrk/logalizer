@@ -51,10 +51,10 @@ jobs:
         shell: bash
         # ELECTRON_SKIP_BINARY_DOWNLOAD: electron-builder fetches its own copy at package time.
         # || true: npm exits 1 on some runners due to a known exit-handler bug even when the
-        # install succeeds; we verify node_modules exists before continuing.
+        # install succeeds; we verify a key binary exists before continuing.
         run: |
           npm install --no-fund --no-audit || true
-          [ -d node_modules ] || { echo "root npm install failed"; exit 1; }
+          [ -f node_modules/.bin/concurrently ] || [ -f node_modules/.bin/concurrently.cmd ] || { echo "root npm install failed"; exit 1; }
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
@@ -70,8 +70,8 @@ jobs:
         working-directory: client
         run: |
           npm install --no-fund --no-audit || true
-          [ -d node_modules ] || { echo "client npm install failed"; exit 1; }
-          ./node_modules/.bin/vite build
+          [ -f node_modules/.bin/vite ] || [ -f node_modules/.bin/vite.cmd ] || { echo "client npm install failed — vite not found"; exit 1; }
+          npm run build
 
       - name: Package Electron app
         shell: bash
@@ -119,7 +119,7 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
-          NOTES=$(awk "/^## \[${VERSION//./\\.}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          NOTES=$(awk "/^## \[${VERSION//./\\.}\]/{found=1; next} found && /^## \[/{exit} found && /^---$/{exit} found && /^<!--/{exit} found{print}" CHANGELOG.md)
           if [ -z "$NOTES" ]; then
             NOTES="See [CHANGELOG.md](CHANGELOG.md) for details."
           fi
@@ -187,8 +187,10 @@ jobs:
           # 1. Stamp the released version with today's date (if not already dated)
           sed -i "s/^## \[${VERSION//./\\.}\]$/## [${VERSION}] — ${DATE}/" CHANGELOG.md
 
-          # 2. Prepend a new section for the next version right above the released one
-          sed -i "s/^## \[${VERSION//./\\.}\] — ${DATE}/## [${NEXT}]\n\n## [${VERSION}] — ${DATE}/" CHANGELOG.md
+          # 2. Prepend a new section for the next version right above the released one.
+          #    Match any date suffix so the sed succeeds even if the CHANGELOG date
+          #    differs from the CI runner's UTC clock.
+          sed -i "s/^## \[${VERSION//./\\.}\]\( — .*\)\?$/## [${NEXT}]\n\n## [${VERSION}] — ${DATE}/" CHANGELOG.md
 
           # 3. Append a reference link at the bottom for the released version
           if ! grep -q "^\[${VERSION}\]:" CHANGELOG.md; then
