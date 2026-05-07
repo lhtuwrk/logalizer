@@ -33,6 +33,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            client/package-lock.json
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -57,13 +61,13 @@ jobs:
       - name: Install server dependencies
         shell: bash
         working-directory: server
-        run: npm install --no-fund --no-audit
+        run: npm ci --no-fund --no-audit
 
       - name: Install and build client
         shell: bash
         working-directory: client
         run: |
-          npm install --no-fund --no-audit
+          npm ci --no-fund --no-audit
           npm run build
 
       - name: Package Electron app
