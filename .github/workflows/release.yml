@@ -69,7 +69,18 @@ jobs:
       - name: Install server dependencies
         shell: bash
         working-directory: server
-        run: npm ci --no-fund --no-audit
+        run: |
+          echo "=== node: $(node -v) | npm: $(npm -v) ==="
+          echo "=== package.json version: $(node -p "require('./package.json').version") ==="
+          echo "=== lockfile version: $(node -p "require('./package-lock.json').version") ==="
+          npm ci --no-fund --no-audit --loglevel=verbose || {
+            echo "=== npm ci failed — dumping debug log ==="
+            for log in "$(npm config get cache)"/_logs/*-debug-0.log; do
+              echo "--- $log ---"
+              cat "$log" || true
+            done
+            exit 1
+          }
 
       - name: Install and build client
         shell: bash
