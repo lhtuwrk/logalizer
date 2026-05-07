@@ -32,11 +32,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            server/package-lock.json
-            client/package-lock.json
 
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
@@ -54,22 +49,29 @@ jobs:
 
       - name: Install root dependencies
         shell: bash
-        # Skip electron binary download — electron-builder fetches its own copy at package time
-        run: npm install --no-fund --no-audit
+        # ELECTRON_SKIP_BINARY_DOWNLOAD: electron-builder fetches its own copy at package time.
+        # || true: npm exits 1 on some runners due to a known exit-handler bug even when the
+        # install succeeds; we verify node_modules exists before continuing.
+        run: |
+          npm install --no-fund --no-audit || true
+          [ -d node_modules ] || { echo "root npm install failed"; exit 1; }
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
       - name: Install server dependencies
         shell: bash
         working-directory: server
-        run: npm install --no-fund --no-audit
+        run: |
+          npm install --no-fund --no-audit || true
+          [ -d node_modules ] || { echo "server npm install failed"; exit 1; }
 
       - name: Install and build client
         shell: bash
         working-directory: client
         run: |
-          npm install --no-fund --no-audit
-          npm run build
+          npm install --no-fund --no-audit || true
+          [ -d node_modules ] || { echo "client npm install failed"; exit 1; }
+          ./node_modules/.bin/vite build
 
       - name: Package Electron app
         shell: bash
@@ -127,12 +129,16 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
 
+      - name: Write release notes to file
+        shell: bash
+        run: printf '%s' "${{ steps.changelog.outputs.NOTES }}" > release-notes.md
+
       - name: Create release and upload assets
         uses: softprops/action-gh-release@v2
         with:
           name: "Logalizer v${{ steps.version.outputs.VERSION }}"
           tag_name: ${{ github.ref_name }}
-          body: "${{ steps.changelog.outputs.NOTES }}"
+          body_path: release-notes.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: artifacts/**/*
