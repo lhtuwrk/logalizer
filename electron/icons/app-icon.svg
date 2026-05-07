@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1024"
+     height="1024"
+     viewBox="0 0 1024 1024"
+     fill="none">
+
+  <rect width="1024"
+        height="1024"
+        rx="220"
+        fill="#1e3a8a"/>
+
+  <!-- Prompt -->
+  <path d="M270 350L410 512L270 674"
+        stroke="#F8FAFC"
+        stroke-width="52"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Logs -->
+  <path d="M500 420H760"
+        stroke="#F8FAFC"
+        stroke-width="52"
+        stroke-linecap="round"/>
+
+  <path d="M500 600H670"
+        stroke="#F8FAFC"
+        stroke-width="52"
+        stroke-linecap="round"/>
+
+  <!-- Active Dot -->
+  <circle cx="790"
+          cy="600"
+          r="36"
+          fill="#22C55E"/>
+
+</svg>

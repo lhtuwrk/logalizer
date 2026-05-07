@@ -1,0 +1,87 @@
+{
+  "name": "logalizer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Desktop log analyzer — drop any log file and instantly surface errors, anomalies, and root-cause hints.",
+  "main": "electron/main.mjs",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "dev": "concurrently -n server,client -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "dev:electron": "npx kill-port 5173 5174 & concurrently -n server,vite,electron -c blue,magenta,cyan --kill-others-on-fail \"npm --prefix server run dev\" \"npm --prefix client run dev\" \"npx electron .\"",
+    "start": "concurrently -n server,client -c blue,magenta \"npm --prefix server start\" \"npm --prefix client run preview\"",
+    "build": "npm --prefix client run build",
+    "generate-icons": "node generate-icons.js",
+    "build:electron": "npm --prefix client run build && npx electron-builder",
+    "dist": "npm run build:electron",
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "electron": "npx electron ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "kill-port": "^2.0.1",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.logalizer.desktop",
+    "productName": "Logalizer",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "**/*",
+          "!uploads/**",
+          "!.gitkeep"
+        ]
+      },
+      {
+        "from": "client/dist",
+        "to": "client/dist"
+      }
+    ],
+    "win": {
+      "icon": "electron/icons/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "mac": {
+      "icon": "electron/icons/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "electron/icons/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}

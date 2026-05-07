@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html:not(.dark) body {
+  background: #f3f4f8;
+  color: #0c111b;
+}
+
+/* ── Light mode token overrides ─────────────────────────────────────────── */
+html:not(.dark) .bg-bg         { background: #f3f4f8; }
+html:not(.dark) .bg-bg-elev    { background: #ffffff; }
+html:not(.dark) .bg-bg-panel   { background: #f9fafb; }
+html:not(.dark) .bg-bg-hover   { background: #e8ecf2; }
+html:not(.dark) .border-border        { border-color: #d1d5db; }
+html:not(.dark) .border-border-subtle { border-color: #e5e7eb; } /* was #1a1f29 — fix dark border on white rows */
+html:not(.dark) .text-text      { color: #0c111b; }
+html:not(.dark) .text-text-muted{ color: #4b5563; }
+html:not(.dark) .text-text-dim  { color: #6b7280; } /* was #94a0b1 — too faint on white */
+
+/* ── Light mode: level badge text (darker for white backgrounds) ─────────── */
+html:not(.dark) .lvl-INFO    { color: #2563eb; }
+html:not(.dark) .lvl-WARN    { color: #b45309; }
+html:not(.dark) .lvl-ERROR   { color: #dc2626; }
+html:not(.dark) .lvl-FATAL   { color: #991b1b; }
+html:not(.dark) .lvl-CRITICAL{ color: #991b1b; }
+html:not(.dark) .lvl-DEBUG   { color: #6b7280; }
+html:not(.dark) .lvl-TRACE   { color: #9ca3af; }
+html:not(.dark) .lvl-UNKNOWN { color: #9ca3af; }
+
+/* ── Light mode: row left-border accent colors ──────────────────────────── */
+html:not(.dark) .row-INFO    { border-left-color: #3b82f6; }
+html:not(.dark) .row-WARN    { border-left-color: #f59e0b; }
+html:not(.dark) .row-ERROR   { border-left-color: #ef4444; }
+html:not(.dark) .row-FATAL   { border-left-color: #b91c1c; }
+html:not(.dark) .row-CRITICAL{ border-left-color: #b91c1c; }
+html:not(.dark) .row-DEBUG   { border-left-color: #9ca3af; }
+html:not(.dark) .row-TRACE   { border-left-color: #d1d5db; }
+html:not(.dark) .row-UNKNOWN { border-left-color: #d1d5db; }
+
+/* ── Light mode: subtle row background tints by level ──────────────────── */
+html:not(.dark) .row-ERROR,
+html:not(.dark) .row-FATAL,
+html:not(.dark) .row-CRITICAL { background: #fff7f7; }
+html:not(.dark) .row-WARN     { background: #fffdf5; }
+html:not(.dark) .row-DEBUG    { background: #fafafa; }
+html:not(.dark) .row-TRACE    { background: #fafafa; }
+html:not(.dark) .row-UNKNOWN  { background: #fafafa; }
+
+/* ── Light mode: filter chips ───────────────────────────────────────────── */
+html:not(.dark) .filter-chip {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+html:not(.dark) .filter-chip button { color: #1d4ed8; }
+
+/* ── Light mode: btn base ───────────────────────────────────────────────── */
+/* ── Light mode: hover utility overrides (Tailwind generates separate rules) ─ */
+html:not(.dark) .hover\:bg-bg-hover:hover { background-color: #e8ecf2 !important; }
+
+/* ── Light mode: btn base ───────────────────────────────────────────────── */
+html:not(.dark) .btn {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #111827;
+}
+html:not(.dark) .btn:hover { background: #f3f4f6; }
+html:not(.dark) .btn-accent {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+html:not(.dark) .btn-accent:hover { background: #dbeafe; }
+
+/* ── Light mode: search hit highlight ───────────────────────────────────── */
+html:not(.dark) mark.search-hit {
+  background: rgba(245, 158, 11, 0.25);
+  color: #92400e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(138, 147, 163, 0.25); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(138, 147, 163, 0.45); }
+
+/* Log row level color bar */
+.lvl-INFO    { color: #5b8cff; }
+.lvl-WARN    { color: #f5a524; }
+.lvl-ERROR   { color: #ef4444; }
+.lvl-FATAL   { color: #b91c1c; }
+.lvl-CRITICAL{ color: #b91c1c; }
+.lvl-DEBUG   { color: #8a93a3; }
+.lvl-TRACE   { color: #5a6370; }
+.lvl-UNKNOWN { color: #5a6370; }
+
+.row-INFO    { border-left-color: #5b8cff; }
+.row-WARN    { border-left-color: #f5a524; }
+.row-ERROR   { border-left-color: #ef4444; }
+.row-FATAL   { border-left-color: #b91c1c; }
+.row-CRITICAL{ border-left-color: #b91c1c; }
+.row-DEBUG   { border-left-color: #444a55; }
+.row-TRACE   { border-left-color: #2c3038; }
+.row-UNKNOWN { border-left-color: #2c3038; }
+
+/* Highlight matches */
+mark.search-hit {
+  background: rgba(245, 165, 36, 0.35);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Subtle focus ring */
+:focus-visible {
+  outline: 2px solid #7aa2ff;
+  outline-offset: 1px;
+}
+
+/* Keyboard shortcut bar */
+.shortcut-bar-root {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  --sc-kbd-bg: #ffffff;
+  --sc-kbd-border: rgba(0,0,0,0.18);
+  --sc-kbd-text: #374151;
+  --sc-label: #6b7280;
+  --sc-divider: #d1d5db;
+}
+html.dark .shortcut-bar-root {
+  border-top-color: rgba(255,255,255,0.07);
+  background: #0e1117;
+  --sc-kbd-bg: #1a1f2b;
+  --sc-kbd-border: rgba(255,255,255,0.15);
+  --sc-kbd-text: #c9d1e0;
+  --sc-label: #8a93a3;
+  --sc-divider: rgba(255,255,255,0.1);
+}
+
+/* Resizable panel drag handle */
+.drag-handle {
+  width: 4px;
+  min-width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+}
+.drag-handle:hover,
+.drag-handle:active {
+  background: #7aa2ff55;
+}
