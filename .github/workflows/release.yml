@@ -50,27 +50,20 @@ jobs:
       - name: Install root dependencies
         shell: bash
         # ELECTRON_SKIP_BINARY_DOWNLOAD: electron-builder fetches its own copy at package time.
-        # || true: npm exits 1 on some runners due to a known exit-handler bug even when the
-        # install succeeds; we verify a key binary exists before continuing.
-        run: |
-          npm install --no-fund --no-audit || true
-          [ -f node_modules/.bin/concurrently ] || [ -f node_modules/.bin/concurrently.cmd ] || { echo "root npm install failed"; exit 1; }
+        run: npm install --no-fund --no-audit
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
       - name: Install server dependencies
         shell: bash
         working-directory: server
-        run: |
-          npm install --no-fund --no-audit || true
-          [ -d node_modules ] || { echo "server npm install failed"; exit 1; }
+        run: npm install --no-fund --no-audit
 
       - name: Install and build client
         shell: bash
         working-directory: client
         run: |
-          npm install --no-fund --no-audit || true
-          [ -f node_modules/.bin/vite ] || [ -f node_modules/.bin/vite.cmd ] || { echo "client npm install failed — vite not found"; exit 1; }
+          npm install --no-fund --no-audit
           npm run build
 
       - name: Package Electron app
