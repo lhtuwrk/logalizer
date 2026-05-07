@@ -1,0 +1,187 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build — ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+          - os: macos-latest
+            platform: mac
+          - os: ubuntu-latest
+            platform: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y libarchive-tools rpm
+
+      # Always set version from the git tag so electron-builder names
+      # the installer correctly regardless of what's in package.json.
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm pkg set version="$VERSION"
+          npm pkg set version="$VERSION" --prefix server
+          npm pkg set version="$VERSION" --prefix client
+
+      - name: Install dependencies
+        run: npm run install:all
+
+      - name: Build client + package app
+        run: npm run build:electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          retention-days: 3
+          path: |
+            dist-electron/*.exe
+            dist-electron/*.dmg
+            dist-electron/*.AppImage
+            dist-electron/*.zip
+            dist-electron/*.tar.gz
+            dist-electron/latest*.yml
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      # Read the changelog section that matches this version.
+      # Handles both "## [1.0.0]" (undated) and "## [1.0.0] — 2026-05-07".
+      - name: Read changelog entry
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          NOTES=$(awk "/^## \[$VERSION\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES="See [CHANGELOG.md](CHANGELOG.md) for details."
+          fi
+          {
+            echo "NOTES<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Logalizer v${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.NOTES }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # After a successful release this job:
+  #   1. Stamps the released version with today's date in CHANGELOG.md
+  #   2. Calculates the next patch version  (1.0.0 → 1.0.1)
+  #   3. Prepends a new ## [1.0.1] section to CHANGELOG.md
+  #   4. Bumps package.json / server / client to 1.0.1
+  #   5. Appends a reference link for the released version
+  #   6. Commits everything back to main [skip ci]
+  sync-version:
+    name: Bump to next version
+    needs: release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate next patch version
+        id: next
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          IFS='.' read -ra V <<< "$VERSION"
+          NEXT="${V[0]}.${V[1]}.$((V[2] + 1))"
+          echo "VERSION=$VERSION"   >> $GITHUB_OUTPUT
+          echo "NEXT=$NEXT"         >> $GITHUB_OUTPUT
+          echo "DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG.md
+        shell: bash
+        run: |
+          VERSION="${{ steps.next.outputs.VERSION }}"
+          NEXT="${{ steps.next.outputs.NEXT }}"
+          DATE="${{ steps.next.outputs.DATE }}"
+
+          # 1. Stamp the released version with today's date (if not already dated)
+          sed -i "s/^## \[$VERSION\]$/## [$VERSION] — $DATE/" CHANGELOG.md
+
+          # 2. Prepend a new section for the next version right above the released one
+          sed -i "s/^## \[$VERSION\] — $DATE/## [$NEXT]\n\n## [$VERSION] — $DATE/" CHANGELOG.md
+
+          # 3. Append a reference link at the bottom for the released version
+          if ! grep -q "^\[$VERSION\]:" CHANGELOG.md; then
+            printf "\n[%s]: https://github.com/%s/releases/tag/v%s\n" \
+              "$VERSION" "${{ github.repository }}" "$VERSION" >> CHANGELOG.md
+          fi
+
+      - name: Bump package.json versions to next patch
+        shell: bash
+        run: |
+          NEXT="${{ steps.next.outputs.NEXT }}"
+          npm pkg set version="$NEXT"
+          npm pkg set version="$NEXT" --prefix server
+          npm pkg set version="$NEXT" --prefix client
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          VERSION="${{ steps.next.outputs.VERSION }}"
+          NEXT="${{ steps.next.outputs.NEXT }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json server/package.json client/package.json CHANGELOG.md
+          git diff --staged --quiet || (
+            git commit -m "chore: release v$VERSION → open v$NEXT [skip ci]" &&
+            git push origin main
+          )
