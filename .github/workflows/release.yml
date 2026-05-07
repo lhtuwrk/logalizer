@@ -38,10 +38,6 @@ jobs:
             server/package-lock.json
             client/package-lock.json
 
-      - name: Pin npm to v10
-        shell: bash
-        run: npm install -g npm@10
-
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install -y libarchive-tools rpm
@@ -58,7 +54,10 @@ jobs:
 
       - name: Install root dependencies
         shell: bash
+        # Skip electron binary download — electron-builder fetches its own copy at package time
         run: npm install --no-fund --no-audit
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
 
       - name: Install server dependencies
         shell: bash
