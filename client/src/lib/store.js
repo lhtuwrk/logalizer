@@ -22,6 +22,8 @@ export const useStore = create((set, get) => ({
   detail: null,            // { record, before, after } when a row is selected
   jumpRequest: 0,          // increments to ask LogViewer to scroll to selectedIndex
   selectedIndex: -1,
+  customParserOpen: false, // is the custom-parser modal open?
+  samples: null,           // [{ file, lines: [] }] when loaded
 
   setBusy: (msg) => set({ busyMessage: msg }),
   setError: (e) => set({ error: e }),
@@ -194,6 +196,36 @@ export const useStore = create((set, get) => ({
     });
     ws.addEventListener('close', () => set((s) => ({ monitor: { ...s.monitor, active: false } })));
   },
+  openCustomParser: async () => {
+    const { sessionId } = get();
+    if (!sessionId) return;
+    set({ busyMessage: 'Loading samples…' });
+    try {
+      const r = await api.getSamples(sessionId, 30);
+      set({ samples: r.files, customParserOpen: true });
+    } catch (e) {
+      set({ error: e.message });
+    } finally {
+      set({ busyMessage: null });
+    }
+  },
+  closeCustomParser: () => set({ customParserOpen: false }),
+
+  applyCustomParser: async (spec) => {
+    const { sessionId } = get();
+    if (!sessionId) return;
+    set({ busyMessage: 'Re-parsing logs…', error: null });
+    try {
+      const r = await api.reparse(sessionId, spec);
+      set({ summary: r.summary, recordCount: r.recordCount, customParserOpen: false });
+      await get().fetchRecords();
+    } catch (e) {
+      set({ error: e.message });
+    } finally {
+      set({ busyMessage: null });
+    }
+  },
+
   stopMonitor: () => {
     const { monitor } = get();
     if (monitor.ws) try { monitor.ws.send(JSON.stringify({ action: 'stop' })); monitor.ws.close(); } catch {}
