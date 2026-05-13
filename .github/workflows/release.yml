@@ -137,9 +137,13 @@ jobs:
             echo "| Platform | File | Notes |"
             echo "| --- | --- | --- |"
             echo "| Windows (x64) | \`Logalizer Setup ${VERSION}.exe\` | Installer — double-click to install |"
+            echo "| Windows (x64, portable) | \`Logalizer-${VERSION}-portable.exe\` | No install — runs from any folder or USB drive |"
             echo "| macOS (Apple Silicon) | \`Logalizer-${VERSION}-arm64.dmg\` | M1/M2/M3 Macs |"
             echo "| macOS (Intel) | \`Logalizer-${VERSION}.dmg\` | Intel-based Macs |"
+            echo "| macOS (Apple Silicon, portable) | \`Logalizer-${VERSION}-arm64-mac.zip\` | Unzipped \`.app\` runs anywhere |"
+            echo "| macOS (Intel, portable) | \`Logalizer-${VERSION}-mac.zip\` | Unzipped \`.app\` runs anywhere |"
             echo "| Linux (x64) | \`Logalizer-${VERSION}.AppImage\` | Make executable: \`chmod +x\`, then run |"
+            echo "| Linux (x64, portable) | \`Logalizer-${VERSION}.tar.gz\` | Extract and run \`Logalizer\` from the folder |"
           } > release-notes.md
 
       - name: Create release and upload assets
