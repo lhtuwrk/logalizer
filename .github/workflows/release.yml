@@ -126,8 +126,9 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ steps.version.outputs.VERSION }}"
+          NOTES="${{ steps.changelog.outputs.NOTES }}"
           {
-            printf '%s\n\n' "${{ steps.changelog.outputs.NOTES }}"
+            printf '%s\n\n' "$NOTES"
             echo "## Downloads"
             echo ""
             echo "Pick the file that matches your operating system:"
