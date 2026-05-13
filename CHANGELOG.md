@@ -25,6 +25,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - **Rust `env_logger` / `tracing` logs no longer collapse into a single record.** The bracketed-ISO timestamp pattern required `]` to immediately follow the timestamp, but lines like `[2026-05-06T08:01:36Z INFO  db_bridge]` keep the level and logger inside the same bracket — so `isContinuation` treated every line as a continuation and merged the whole file into one entry. Added a compound-bracket timestamp pattern and a Rust-format fast-path that extracts timestamp, level, and logger correctly
 - Upload temp files are no longer deleted while the session is still active; retained for potential re-parsing and removed only when the session ends
+- **Custom-parser modal: field buttons were disabled after releasing the mouse.** The drag-selection was cleared on `mouseUp`, so by the time you tried to click Time / Level / Logger the selection was already gone. Selection now persists after release until it's either tagged or replaced by a new drag
+- **Right panel (Insights / Charts / Report) didn't scroll.** The right-panel wrapper missed `flex` on its container, so the inner `overflow-auto` had no bounded height and long error lists were clipped instead of scrolling
 
 ---
 ## [1.0.0] — 2026-05-07
