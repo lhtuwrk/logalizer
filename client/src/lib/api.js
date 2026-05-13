@@ -54,6 +54,17 @@ export const api = {
     const sp = new URLSearchParams({ file, lineNo, radius });
     return jfetch(`/api/sessions/${id}/context?${sp.toString()}`);
   },
+  getSamples: (id, perFile = 20) => jfetch(`/api/sessions/${id}/samples?perFile=${perFile}`),
+  reparse: (id, spec) => jfetch(`/api/sessions/${id}/reparse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(spec),
+  }),
+  previewParser: (spec) => jfetch('/api/parser/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(spec),
+  }),
   exportUrl: (id, fmt, q = {}) => {
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(q)) if (v != null && v !== '') sp.set(k, v);
