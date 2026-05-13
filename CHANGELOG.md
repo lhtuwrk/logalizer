@@ -5,8 +5,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
-## [1.0.1]
+## [1.1.0] — 2026-05-13
+### Added
 
+- **Custom log format builder** — when auto-detection produces mostly unknown records, a highlighted "Custom parser (recommended)" button appears in the sidebar. Opens a modal that loads sample lines from each file, lets you drag-select parts of a sample line, and tag spans as `timestamp`, `level`, `logger`, `thread`, `context`, or `message`. Generated regex and parsed preview update live; Apply & re-parse rebuilds the entire session in place without re-uploading
+- **Format-specific parsers** — new chain of matchers layered ahead of the generic plain parser recognises out of the box: Rust `env_logger` / `tracing-subscriber`, Logback / Spring Boot, log4j / Java (two variants), Python `logging` (two variants), PostgreSQL, MySQL, nginx error log, Apache/nginx Combined access log, Heroku router, Kubernetes klog, Android Logcat, Syslog RFC 3164 & 5424, CEF, LEEF, Windows Event Log textual export, Go default log, and Docker JSON-File envelopes (inner line is re-parsed through the chain)
+- **Richer JSON field aliases** — `levelname`, `log_level`, `thread_name`, `request_id`, `trace_id`, `spanId`, `eventTime`, `component`, `source`
+- **Syslog severity mapping** — numeric `<PRI>` severity (`0`–`7`) normalised to `FATAL`…`DEBUG`; `PANIC` mapped to `FATAL`
+- **Parser API endpoints** — `GET /api/sessions/:id/samples` returns first N raw lines per file; `POST /api/sessions/:id/reparse` applies a `{sample, spans}` spec to an existing session; `POST /api/parser/preview` is a stateless preview against one line
+
+### Changed
+
+- **Continuation detection** recognises CEF / LEEF / klog / Windows / syslog 5424 line openers in addition to timestamps, so multiline records no longer swallow the next entry when those formats are mixed in
+- **Sessions retain raw file paths** (or the original pasted text) so a session can be re-parsed with a custom format spec without re-uploading; files are cleaned up when the session is deleted
+- `parseStream` accepts a `customParser` option that bypasses format detection; unmatched lines fold into the previous record as continuations
+- Timestamp patterns expanded with `[ISO …]` compound bracket and `dd/mm/yyyy` / `dd-mm-yyyy` shapes
+
+### Fixed
+
+- **Rust `env_logger` / `tracing` logs no longer collapse into a single record.** The bracketed-ISO timestamp pattern required `]` to immediately follow the timestamp, but lines like `[2026-05-06T08:01:36Z INFO  db_bridge]` keep the level and logger inside the same bracket — so `isContinuation` treated every line as a continuation and merged the whole file into one entry. Added a compound-bracket timestamp pattern and a Rust-format fast-path that extracts timestamp, level, and logger correctly
+- Upload temp files are no longer deleted while the session is still active; retained for potential re-parsing and removed only when the session ends
+
+---
 ## [1.0.0] — 2026-05-07
 ### Added
 
