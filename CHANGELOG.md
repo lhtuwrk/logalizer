@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
+## [1.1.1]
+
 ## [1.1.0] — 2026-05-13
 ### Added
 
@@ -56,3 +58,5 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- version links — kept below all sections so awk extraction doesn't include them -->
 [1.0.0]: https://github.com/YOUR_USERNAME/logalizer/releases/tag/v1.0.0
+
+[1.1.0]: https://github.com/lhtuwrk/logalizer/releases/tag/v1.1.0
