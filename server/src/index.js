@@ -16,6 +16,7 @@ import { Aggregator, filterRecords, rootCauseHints } from './lib/analyzer.js';
 import { investigate, listLogFiles } from './lib/investigator.js';
 import { createSession, getSession, deleteSession, listSessions } from './lib/sessions.js';
 import { toJSON, toCSV, toReportHTML } from './lib/export.js';
+import { buildCustomParser, previewCustomParser } from './lib/customParser.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -98,11 +99,11 @@ async function expandFiles(files) {
 }
 
 // Parse all files in an expanded list into an Aggregator.
-async function parseFiles(expanded, agg) {
+async function parseFiles(expanded, agg, customParser = null) {
   for (const f of expanded) {
     const lines = f.gz ? readGzipLines(f.path) : readLines(f.path);
     const logName = f.gz ? f.name.replace(/\.gz$/i, '') : f.name;
-    for await (const rec of parseStream(lines, { file: logName })) {
+    for await (const rec of parseStream(lines, { file: logName, customParser })) {
       agg.add(rec);
     }
   }
@@ -114,15 +115,20 @@ async function buildSession({ source, files }) {
   const agg = new Aggregator();
   await parseFiles(expanded, agg);
 
-  for (const f of expanded) {
-    if (f._tmp) try { fs.unlinkSync(f.path); } catch {}
-  }
+  // Keep file paths so the user can later re-parse with a custom format spec.
+  // These are removed when the session is deleted (see sessions.js).
+  const rawFiles = expanded.map(f => ({
+    name: f.gz ? f.name.replace(/\.gz$/i, '') : f.name,
+    path: f.path,
+    gz: !!f.gz,
+  }));
 
   return createSession({
     source,
     files: expanded.map(f => ({ name: f.gz ? f.name.replace(/\.gz$/i, '') : f.name, size: f.size })),
     records: agg.records,
     aggregator: agg,
+    rawFiles,
   });
 }
 
@@ -147,6 +153,7 @@ app.post('/api/sessions/text', async (req, res) => {
       files: [{ name: 'pasted.log', size: Buffer.byteLength(text) }],
       records: agg.records,
       aggregator: agg,
+      rawFiles: [{ name: 'pasted.log', text }],
     });
     res.json({ sessionId: id, summary: summaryWithHints(agg), recordCount: agg.total });
   } catch (e) {
@@ -275,10 +282,6 @@ app.post('/api/sessions/:id/add-files', upload.array('files', 50), async (req, r
     const expanded = await expandFiles(newFiles);
     await parseFiles(expanded, s.aggregator);
 
-    for (const f of expanded) {
-      if (f._tmp) try { fs.unlinkSync(f.path); } catch {}
-    }
-
     const existingNames = new Set(s.files.map(f => f.name));
     for (const f of expanded) {
       const displayName = f.gz ? f.name.replace(/\.gz$/i, '') : f.name;
@@ -286,6 +289,8 @@ app.post('/api/sessions/:id/add-files', upload.array('files', 50), async (req, r
         s.files.push({ name: displayName, size: f.size });
         existingNames.add(displayName);
       }
+      if (!s.rawFiles) s.rawFiles = [];
+      s.rawFiles.push({ name: displayName, path: f.path, gz: !!f.gz });
     }
     res.json({ sessionId: s.id, summary: summaryWithHints(s.aggregator), recordCount: s.aggregator.total, files: s.files });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -303,8 +308,90 @@ app.delete('/api/sessions/:id/files', (req, res) => {
   s.aggregator = newAgg;
   s.records = newAgg.records;
   s.files = s.files.filter(f => f.name !== file);
+  if (s.rawFiles) {
+    const dropped = s.rawFiles.filter(f => f.name === file);
+    for (const d of dropped) if (d.path) { try { fs.unlinkSync(d.path); } catch {} }
+    s.rawFiles = s.rawFiles.filter(f => f.name !== file);
+  }
 
   res.json({ sessionId: s.id, summary: summaryWithHints(s.aggregator), recordCount: s.aggregator.total, files: s.files });
+});
+
+// Return the first N raw lines from each file of a session. Used by the
+// "custom parser" UI so the user can pick a representative line to mark up.
+app.get('/api/sessions/:id/samples', async (req, res) => {
+  const s = getSession(req.params.id);
+  if (!s) return res.status(404).json({ error: 'session not found' });
+  const perFile = Math.min(50, Math.max(1, Number(req.query.perFile) || 20));
+  try {
+    const out = [];
+    for (const f of (s.rawFiles || [])) {
+      const lines = [];
+      const iter = f.text != null
+        ? iterText(f.text)
+        : f.gz ? readGzipLines(f.path) : readLines(f.path);
+      for await (const line of iter) {
+        if (!line.trim()) continue;
+        lines.push(line);
+        if (lines.length >= perFile) break;
+      }
+      out.push({ file: f.name, lines });
+    }
+    res.json({ files: out });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Re-parse the session using a user-defined parser spec.
+// Body: { sample: string, spans: [{ field, start, end }] }
+// Returns updated summary + record count.
+app.post('/api/sessions/:id/reparse', async (req, res) => {
+  const s = getSession(req.params.id);
+  if (!s) return res.status(404).json({ error: 'session not found' });
+  try {
+    const { sample, spans } = req.body || {};
+    if (typeof sample !== 'string' || !Array.isArray(spans) || spans.length === 0) {
+      return res.status(400).json({ error: 'sample and spans[] required' });
+    }
+    const customParser = buildCustomParser({ sample, spans });
+
+    const agg = new Aggregator();
+    for (const f of (s.rawFiles || [])) {
+      const iter = f.text != null
+        ? iterText(f.text)
+        : f.gz ? readGzipLines(f.path) : readLines(f.path);
+      for await (const rec of parseStream(iter, { file: f.name, customParser })) {
+        agg.add(rec);
+      }
+    }
+    s.aggregator = agg;
+    s.records = agg.records;
+    s.customParser = { sample, spans, regex: customParser.regexSource };
+    res.json({
+      sessionId: s.id,
+      summary: summaryWithHints(agg),
+      recordCount: agg.total,
+      regex: customParser.regexSource,
+    });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Preview a parser spec against a single line without touching the session.
+// Body: { sample, spans, line? } — uses `line` (or `sample`) as the test input.
+app.post('/api/parser/preview', (req, res) => {
+  try {
+    const { sample, spans, line } = req.body || {};
+    if (typeof sample !== 'string' || !Array.isArray(spans)) {
+      return res.status(400).json({ error: 'sample and spans[] required' });
+    }
+    const preview = previewCustomParser({ sample, spans }, line || sample);
+    res.json(preview);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 // Sessions list / delete
