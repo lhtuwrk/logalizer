@@ -19,6 +19,8 @@ export default function Sidebar() {
   const startMonitor = useStore(s => s.startMonitor);
   const stopMonitor = useStore(s => s.stopMonitor);
   const monitor = useStore(s => s.monitor);
+  const openCustomParser = useStore(s => s.openCustomParser);
+  const recordCount = useStore(s => s.recordCount);
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -123,6 +125,29 @@ export default function Sidebar() {
           </div>
         )}
       </div>
+
+      {sessionId && (() => {
+        const unknown = summary?.byLevel?.UNKNOWN ?? 0;
+        const total = recordCount || 1;
+        const unparsedRatio = unknown / total;
+        const looksBad = total < 3 || unparsedRatio > 0.5;
+        return (
+          <div className="px-3 py-2 border-b border-border-subtle">
+            <button
+              onClick={openCustomParser}
+              className={`btn w-full text-xs flex items-center justify-center gap-1.5 ${looksBad ? 'btn-accent' : ''}`}
+              title="Define a custom log format by selecting parts of a sample line"
+            >
+              <WrenchIcon /> Custom parser{looksBad ? ' (recommended)' : '…'}
+            </button>
+            {looksBad && (
+              <div className="text-[11px] text-text-muted mt-1.5">
+                Auto-detection produced {total} record{total === 1 ? '' : 's'} with mostly unknown fields. Use this to teach the parser.
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {sessionId && (
         <div className="flex-1 overflow-auto">
@@ -321,6 +346,14 @@ function FolderIcon() {
   return (
     <svg viewBox="0 0 16 16" className="w-4 h-4 shrink-0 text-text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 4a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4z" />
+    </svg>
+  );
+}
+
+function WrenchIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 1.5a3 3 0 0 0-3.9 3.9L1.5 11l3 3 5.6-5.6A3 3 0 0 0 14 4.5l-2 2-1.5-1.5 2-2Z" />
     </svg>
   );
 }
