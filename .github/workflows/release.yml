@@ -124,9 +124,10 @@ jobs:
 
       - name: Write release notes to file
         shell: bash
+        env:
+          NOTES: ${{ steps.changelog.outputs.NOTES }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          NOTES="${{ steps.changelog.outputs.NOTES }}"
           {
             printf '%s\n\n' "$NOTES"
             echo "## Downloads"
