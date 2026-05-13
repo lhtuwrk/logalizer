@@ -148,7 +148,7 @@ export default function App() {
             <>
               <LogViewer />
               <DragHandle onMouseDown={onRightDrag} />
-              <div style={{ width: rightWidth, minWidth: rightWidth }} className="shrink-0 min-h-0">
+              <div style={{ width: rightWidth, minWidth: rightWidth }} className="flex shrink-0 min-h-0">
                 <RightPanel />
               </div>
             </>
