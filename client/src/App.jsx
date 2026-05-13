@@ -6,6 +6,7 @@ import RightPanel from './components/RightPanel.jsx';
 import EmptyState from './components/EmptyState.jsx';
 import Toast from './components/Toast.jsx';
 import DetailDrawer from './components/DetailDrawer.jsx';
+import CustomParser from './components/CustomParser.jsx';
 import { useStore } from './lib/store.js';
 
 const SIDEBAR_MIN = 200;
@@ -163,6 +164,7 @@ export default function App() {
       )}
       {error && <Toast message={error} onClose={() => setError(null)} />}
       <DetailDrawer />
+      <CustomParser />
       <ShortcutBar />
       {globalDrag && (
         <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center"
