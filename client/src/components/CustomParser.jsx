@@ -60,6 +60,7 @@ export default function CustomParser() {
   const [lineIdx, setLineIdx] = useState(0);
   const [spans, setSpans] = useState([]);          // [{field,start,end}]
   const [drag, setDrag] = useState(null);          // { start, end } while dragging
+  const [selection, setSelection] = useState(null);// { start, end } after release
   const [preview, setPreview] = useState(null);    // server preview response
   const [err, setErr] = useState(null);
 
@@ -68,7 +69,7 @@ export default function CustomParser() {
   const sample = lines[lineIdx] || '';
 
   // Reset spans whenever the sample line changes.
-  useEffect(() => { setSpans([]); setPreview(null); setErr(null); }, [fileIdx, lineIdx, samples]);
+  useEffect(() => { setSpans([]); setSelection(null); setDrag(null); setPreview(null); setErr(null); }, [fileIdx, lineIdx, samples]);
 
   // Live preview by hitting the server whenever spans change.
   useEffect(() => {
@@ -90,33 +91,42 @@ export default function CustomParser() {
   function onMouseDown(i, e) {
     e.preventDefault();
     setDrag({ start: i, end: i + 1 });
+    setSelection(null);
   }
   function onMouseEnter(i) {
     if (!drag) return;
     setDrag(d => ({ start: d.start, end: i + 1 }));
   }
   function onMouseUp() {
-    setDrag(null);
+    if (drag) {
+      const a = Math.min(drag.start, drag.end - 1);
+      const b = Math.max(drag.start + 1, drag.end);
+      setSelection({ start: a, end: b });
+      setDrag(null);
+    }
   }
 
+  // Range shown highlighted: live drag, or persisted selection after release.
   const pendingRange = drag
     ? [Math.min(drag.start, drag.end - 1), Math.max(drag.start + 1, drag.end)]
-    : null;
+    : selection
+      ? [selection.start, selection.end]
+      : null;
 
   function assign(field) {
-    if (!pendingRange && !drag) return;
-    const range = pendingRange || [drag.start, drag.end];
-    const [start, end] = range;
+    if (!pendingRange) return;
+    const [start, end] = pendingRange;
     if (end <= start) return;
     // Remove any existing spans that overlap the new range, then insert.
     const remaining = spans.filter(s => s.end <= start || s.start >= end);
     setSpans([...remaining, { field, start, end }].sort((a, b) => a.start - b.start));
     setDrag(null);
+    setSelection(null);
   }
   function removeSpan(idx) {
     setSpans(spans.filter((_, i) => i !== idx));
   }
-  function clearAll() { setSpans([]); setDrag(null); setPreview(null); }
+  function clearAll() { setSpans([]); setDrag(null); setSelection(null); setPreview(null); }
 
   function onApply() {
     if (!spans.length) { setErr('Select at least one field first.'); return; }
@@ -132,7 +142,7 @@ export default function CustomParser() {
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div>
             <div className="text-sm font-semibold">Custom log format</div>
-            <div className="text-xs text-text-muted">Drag-select a part of the sample line, then tag it with a field.</div>
+            <div className="text-xs text-text-muted">Click-and-drag over part of the sample line below, release, then click one of the field buttons (Time / Level / Logger / …) to tag the selection.</div>
           </div>
           <button onClick={close} className="text-text-muted hover:text-text text-xl leading-none">×</button>
         </div>
@@ -173,15 +183,18 @@ export default function CustomParser() {
 
         <div className="px-4 py-3 border-b border-border flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-text-muted mr-1">Assign selection →</span>
-          {FIELDS.map(f => (
-            <button key={f.key}
-                    onClick={() => assign(f.key)}
-                    disabled={!drag && !pendingRange}
-                    className="text-[11px] px-2 py-1 rounded border"
-                    style={{ borderColor: f.color, color: f.color, opacity: (drag || pendingRange) ? 1 : 0.4 }}>
-              {f.label}
-            </button>
-          ))}
+          {FIELDS.map(f => {
+            const enabled = !!pendingRange;
+            return (
+              <button key={f.key}
+                      onClick={() => assign(f.key)}
+                      disabled={!enabled}
+                      className="text-[11px] px-2 py-1 rounded border"
+                      style={{ borderColor: f.color, color: f.color, opacity: enabled ? 1 : 0.4, cursor: enabled ? 'pointer' : 'not-allowed' }}>
+                {f.label}
+              </button>
+            );
+          })}
           <button onClick={clearAll}
                   className="ml-auto text-[11px] px-2 py-1 rounded border border-border text-text-muted hover:text-text">
             Clear all
