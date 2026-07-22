@@ -1,6 +1,6 @@
 # Logalizer
 
-> Desktop log analyzer — drop any log file and instantly surface errors, anomalies, and root-cause hints.
+> Desktop log analyzer — drop any log file and instantly surface errors, anomalies, tracing, and root-cause hints.
 
 ---
 
